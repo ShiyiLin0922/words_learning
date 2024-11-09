@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload File</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .upload-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+        }
+        .status-message, .error-message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+        }
+        .status-message {
+            background-color: #e7f3e7;
+            color: #2d7a2d;
+        }
+        .error-message {
+            background-color: #fbe4e4;
+            color: #b71c1c;
+        }
+        .user-status {
+            color: blue;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div id="loginStatus" class="status-message">Checking login status...</div>
+        <button id="logoutButton" style="display: none;" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="upload-container">
+        <h2>Upload Your Question Bank</h2>
+        <input type="file" id="fileInput" accept=".csv, .txt">
+        <button onclick="uploadFile()">Upload</button>
+        <div id="message" class="status-message"></div>
+    </div>
+
+    <script>
+        async function checkLoginStatus() {
+            const loginStatusDiv = document.getElementById('loginStatus');
+            const logoutButton = document.getElementById('logoutButton');
+
+            try {
+                const response = await fetch('/api/check_login', { method: 'GET' });
+                const result = await response.json();
+
+                if (response.ok && result.logged_in) {
+                    loginStatusDiv.textContent = `Logged in as ${result.username}`;
+                    logoutButton.style.display = 'block';
+                    loginStatusDiv.className = 'status-message';
+                } else {
+                    loginStatusDiv.textContent = 'Not logged in';
+                    logoutButton.style.display = 'none';
+                    loginStatusDiv.className = 'error-message';
+                }
+            } catch (error) {
+                loginStatusDiv.textContent = 'Failed to retrieve login status';
+                loginStatusDiv.className = 'error-message';
+                console.error('Error:', error);
+            }
+        }
+
+        async function logout() {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = '';
+
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                if (response.ok) {
+                    document.getElementById('loginStatus').textContent = 'Not logged in';
+                    document.getElementById('logoutButton').style.display = 'none';
+                    messageDiv.textContent = 'Successfully logged out.';
+                    messageDiv.className = 'status-message';
+                } else {
+                    const result = await response.json();
+                    messageDiv.textContent = result.error || 'Logout failed.';
+                    messageDiv.className = 'error-message';
+                }
+            } catch (error) {
+                messageDiv.textContent = 'An error occurred while logging out. Please try again later.';
+                messageDiv.className = 'error-message';
+                console.error('Error:', error);
+            }
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = '';
+
+            if (!fileInput.files.length) {
+                messageDiv.textContent = 'Please select a file to upload.';
+                messageDiv.className = 'error-message';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                let response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                let result = await response.json();
+                if (response.ok) {
+                    messageDiv.textContent = 'File uploaded successfully. Processing...';
+                    messageDiv.className = 'status-message';
+
+                    const filepath = result.filepath;
+                    response = await fetch('/api/process_upload', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ filepath: filepath })
+                    });
+
+                    result = await response.json();
+                    if (response.ok) {
+                        messageDiv.textContent = 'Words successfully added to your question bank!';
+                        messageDiv.className = 'status-message';
+                    } else {
+                        messageDiv.textContent = result.error || 'Error processing file.';
+                        messageDiv.className = 'error-message';
+                    }
+                } else {
+                    messageDiv.textContent = result.error || 'Error uploading file.';
+                    messageDiv.className = 'error-message';
+                }
+            } catch (error) {
+                messageDiv.textContent = 'Error uploading file: ' + error.message;
+                messageDiv.className = 'error-message';
+                console.error('Error:', error);
+            }
+        }
+
+        // Check login status on page load
+        window.onload = checkLoginStatus;
+    </script>
+</body>
+</html>
+

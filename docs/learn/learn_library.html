@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Library</title>
+    <script>
+        let deletedWords = new Set();
+        let correctCount = 0; // 跟踪正确答案的数量
+
+        // 检查登录状态并更新欢迎信息
+        async function checkLoginStatus() {
+            const userWelcome = document.getElementById('user-welcome');
+
+            try {
+                const response = await fetch('/api/check_login', { method: 'GET' });
+                const result = await response.json();
+
+                if (result.logged_in) {
+                    userWelcome.textContent = `Welcome, ${result.username}!`;
+                } else {
+                    userWelcome.textContent = 'Welcome, Guest!';
+                }
+            } catch (error) {
+                userWelcome.textContent = 'Error checking login status.';
+                console.error('Error:', error);
+            }
+        }
+
+        // 从用户库中获取单词
+        async function loadWord() {
+            try {
+                const response = await fetch('/api/get_libraries');
+                if (!response.ok) throw new Error(`Failed to fetch word. Status: ${response.status}`);
+                
+                const libraryWords = await response.json();
+
+                if (libraryWords.message) {
+                    document.getElementById('english').innerText = libraryWords.message;
+                    return;
+                }
+
+                // 从库中随机选择一个单词
+                const word = libraryWords[Math.floor(Math.random() * libraryWords.length)];
+
+                // 如果该单词被删除，则跳过
+                if (deletedWords.has(word.id)) {
+                    return loadWord(); 
+                }
+
+                // 显示单词详情
+                document.getElementById('english').innerText = word.word;
+                document.getElementById('correctAnswer').value = word.meaning;
+                document.getElementById('wordId').value = word.id;
+                document.getElementById('example').innerText = ''; 
+                document.getElementById('explanation').innerText = word.detail || 'N/A'; 
+
+                // 获取选项并显示
+                const optionsResponse = await fetch('/api/get_options');
+                const optionsData = await optionsResponse.json();
+                optionsData.push(word.meaning);
+                optionsData.sort(() => Math.random() - 0.5);
+
+                const choicesContainer = document.getElementById('choices');
+                choicesContainer.innerHTML = '';
+                optionsData.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.onclick = () => checkAnswer(option);  // 选择答案时检查
+                    choicesContainer.appendChild(button);
+                });
+            } catch (error) {
+                console.error('Error loading word:', error);
+                document.getElementById('english').innerText = 'Error loading word';
+            }
+        }
+
+        // 检查用户选择的答案是否正确
+        async function checkAnswer(selectedAnswer) {
+            const correctAnswer = document.getElementById('correctAnswer').value;
+            const wordId = document.getElementById('wordId').value;
+            const isCorrect = selectedAnswer === correctAnswer;
+
+            // 向后端发送答案
+            await fetch('/api/check_answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    word_id: wordId,
+                    user_answer: selectedAnswer,
+                    correct_answer: correctAnswer
+                })
+            });
+
+            if (isCorrect) {
+                correctCount++; // 正确时增加计数
+                alert('Correct!');
+                setTimeout(loadWord, 1000); // 加载下一个单词
+            } else {
+                alert('Incorrect!');
+                document.getElementById('example').innerText = `Explanation: ${document.getElementById('explanation').innerText}`;
+                
+                // 错题列表中加入当前单词
+                await addToMissedQuestions(wordId);
+            }
+
+            // 更新正确答案计数
+            document.getElementById('correctCount').innerText = `Correct answers: ${correctCount}`;
+        }
+
+        // 添加到错题列表
+        async function addToMissedQuestions(wordId) {
+            try {
+                const response = await fetch('/api/miss', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ word_id: wordId })
+                });
+                
+                if (response.ok) {
+                    console.log(`Word with ID ${wordId} added to missed questions.`);
+                } else {
+                    const result = await response.json();
+                    alert(`Failed to add word to missed list: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error adding word to missed list:', error);
+                alert('Failed to add word to missed list');
+            }
+        }
+
+        // 从库中移除单词
+        async function unlibraryWord() {
+            const wordId = document.getElementById('wordId').value;
+            try {
+                await fetch('/api/unlibrary', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ word_id: wordId })
+                });
+                alert('Word removed from library');
+                loadWord();
+            } catch (error) {
+                console.error('Error removing from library:', error);
+                alert('Failed to remove from library');
+            }
+        }
+
+        // 用户登出
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/login.html';
+        }
+
+        // 页面加载时检查登录状态并加载单词
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginStatus();
+            loadWord();
+        });
+    </script>
+</head>
+<body>
+    <h1>Word Library</h1>
+    <p id="user-welcome">Welcome, Guest!</p>
+    <button onclick="logout()">Logout</button>
+
+    <p id="english">Loading...</p>
+    <input type="hidden" id="correctAnswer">
+    <input type="hidden" id="wordId">
+
+    <div id="choices"></div>
+
+    <p id="example"></p>
+    <p id="explanation"></p>
+
+    <button onclick="unlibraryWord()">Remove from Library</button>
+
+    <p id="correctCount">Correct answers: 0</p>
+</body>
+</html>
+

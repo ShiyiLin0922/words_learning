@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Learning</title>
+    <script>
+        let deletedWords = new Set();
+
+        // 检查登录状态并更新欢迎信息
+        async function checkLoginStatus() {
+            const userWelcome = document.getElementById('user-welcome');
+
+            try {
+                const response = await fetch('/api/check_login', { method: 'GET' });
+                const result = await response.json();
+
+                if (result.logged_in) {
+                    userWelcome.textContent = `Welcome, ${result.username}!`;
+                } else {
+                    userWelcome.textContent = 'Welcome, Guest!';
+                }
+            } catch (error) {
+                userWelcome.textContent = 'Error checking login status.';
+                console.error('Error:', error);
+            }
+        }
+
+        // 获取单词并生成选择题
+        async function loadWord() {
+            try {
+                const response = await fetch('/api/get_word?pool=favorite');
+                if (!response.ok) throw new Error(`Failed to fetch word. Status: ${response.status}`);
+                
+                const word = await response.json();
+
+                // 如果单词已被删除，跳过这个单词
+                if (deletedWords.has(word.id)) {
+                    return loadWord(); 
+                }
+
+                // 显示单词内容
+                document.getElementById('english').innerText = word.word;
+                document.getElementById('correctAnswer').value = word.meaning;
+                document.getElementById('wordId').value = word.id;
+                document.getElementById('example').innerText = ''; 
+                document.getElementById('explanation').innerText = word.detail || 'N/A'; 
+
+                // 获取选项并显示
+                const optionsResponse = await fetch('/api/get_options');
+                const optionsData = await optionsResponse.json();
+                optionsData.push(word.meaning);
+                optionsData.sort(() => Math.random() - 0.5);
+
+                const choicesContainer = document.getElementById('choices');
+                choicesContainer.innerHTML = '';
+                optionsData.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.onclick = () => checkAnswer(option);
+                    choicesContainer.appendChild(button);
+                });
+            } catch (error) {
+                console.error('Error loading word:', error);
+                document.getElementById('english').innerText = 'Error loading word';
+            }
+        }
+
+        // 检查用户的答案是否正确
+        async function checkAnswer(selectedAnswer) {
+            const correctAnswer = document.getElementById('correctAnswer').value;
+            const wordId = document.getElementById('wordId').value;
+            const isCorrect = selectedAnswer === correctAnswer;
+
+            // 向后端发送答案
+            await fetch('/api/check_answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    word_id: wordId,
+                    user_answer: selectedAnswer,
+                    correct_answer: correctAnswer
+                })
+            });
+
+            if (isCorrect) {
+                alert('Correct!');
+                setTimeout(loadWord, 1000);  // 加载下一个单词
+            } else {
+                alert('Incorrect!');
+                document.getElementById('example').innerText = `Explanation: ${document.getElementById('explanation').innerText}`;
+                
+                // 添加到错题列表
+                await addToMissedQuestions(wordId);
+            }
+        }
+
+        // 添加到错题列表
+        async function addToMissedQuestions(wordId) {
+            try {
+                const response = await fetch('/api/miss', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ word_id: wordId })
+                });
+                
+                if (response.ok) {
+                    console.log(`Word with ID ${wordId} added to missed questions.`);
+                } else {
+                    const result = await response.json();
+                    alert(`Failed to add word to missed list: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error adding word to missed list:', error);
+                alert('Failed to add word to missed list');
+            }
+        }
+
+        // 取消收藏
+        async function UnfavoriteWord() {
+            const wordId = document.getElementById('wordId').value;
+            try {
+                await fetch('/api/unfavorite', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ word_id: wordId })
+                });
+                alert('Word unfavorites');
+            } catch (error) {
+                console.error('Error unfavorite:', error);
+                alert('Failed to unfavorites');
+            }
+        }
+
+  
+        // 用户登出
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/login.html';
+        }
+
+        // 页面加载时检查登录状态并加载单词
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginStatus();
+            loadWord();
+        });
+    </script>
+</head>
+<body>
+    <h1 id="user-welcome">Welcome, Guest!</h1>
+    <button onclick="logout()">Logout</button>
+    <div>
+        <h2 id="english"></h2>
+        <div id="choices"></div>
+        <p id="example"></p>
+        <p id="explanation"></p>
+        <input type="hidden" id="correctAnswer">
+        <input type="hidden" id="wordId">
+        <button onclick="UnfavoriteWord()">Unfavorite</button>
+    </div>
+</body>
+</html>
+

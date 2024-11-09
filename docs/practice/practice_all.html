@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Learning</title>
+    <script>
+        let deletedWords = new Set();
+        let totalQuestions;
+        let answeredQuestions = 0;
+        let correctAnswers = 0;
+        let userId;
+
+        async function checkLoginStatus() {
+            const userWelcome = document.getElementById('user-welcome');
+            try {
+                const response = await fetch('/api/check_login');
+                const result = await response.json();
+
+                if (result.logged_in) {
+                    userId = result.user_id;  // Capture user ID
+                    userWelcome.textContent = `Welcome, ${result.username}!`;
+                } else {
+                    userWelcome.textContent = 'Welcome, Guest!';
+                    alert('Please log in to start practicing.');
+                    window.location.href = '/login.html';
+                }
+            } catch (error) {
+                console.error('Error checking login status:', error);
+            }
+        }
+
+        async function loadWord() {
+            if (answeredQuestions >= totalQuestions) {
+                endPractice();
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/get_word?pool=all');
+                const word = await response.json();
+                if (deletedWords.has(word.id)) {
+                    return loadWord();
+                }
+
+                document.getElementById('english').innerText = word.word;
+                document.getElementById('correctAnswer').value = word.meaning;
+                document.getElementById('wordId').value = word.id;
+
+                const optionsResponse = await fetch('/api/get_options');
+                const optionsData = await optionsResponse.json();
+                optionsData.push(word.meaning);
+                optionsData.sort(() => Math.random() - 0.5);
+
+                const choicesContainer = document.getElementById('choices');
+                choicesContainer.innerHTML = '';
+                optionsData.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.onclick = () => checkAnswer(option);
+                    choicesContainer.appendChild(button);
+                });
+
+                // Clear previous result message
+                document.getElementById('result-message').innerText = '';
+            } catch (error) {
+                console.error('Error loading word:', error);
+                document.getElementById('english').innerText = 'Error loading word';
+            }
+        }
+
+        function startPractice() {
+            totalQuestions = parseInt(document.getElementById('questionCount').value);
+            answeredQuestions = 0;
+            correctAnswers = 0;
+            startTime = Date.now();
+            loadWord();
+        }
+
+        async function checkAnswer(selectedAnswer) {
+            const correctAnswer = document.getElementById('correctAnswer').value;
+            const wordId = document.getElementById('wordId').value;
+
+            // Send the selected answer to the server
+            const response = await fetch('/api/check_answer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    word_id: wordId,
+                    user_answer: selectedAnswer,
+                    correct_answer: correctAnswer
+                })
+            });
+
+            const result = await response.json();
+            const resultMessage = document.getElementById('result-message');
+
+            if (result.message === 'Correct answer, words_learned updated') {
+                correctAnswers++;
+                resultMessage.innerText = '正确！';
+            } else {
+                resultMessage.innerText = '错误！';
+                await addToMissedQuestions(wordId);
+            }
+            answeredQuestions++;
+
+            // Set a shorter interval between questions
+            setTimeout(loadWord, 500);  // Set shorter delay (500ms)
+        }
+
+        function endPractice() {
+            const duration = Math.floor((Date.now() - startTime) / 1000);
+            const accuracy = ((correctAnswers / totalQuestions) * 100).toFixed(2);
+
+            document.getElementById('report').style.display = 'block';
+            document.getElementById('totalQuestions').textContent = totalQuestions;
+            document.getElementById('correctAnswers').textContent = correctAnswers;
+            document.getElementById('accuracy').textContent = accuracy;
+            document.getElementById('timeTaken').textContent = duration;
+        }
+
+        async function addToMissedQuestions(wordId) {
+            await fetch('/api/miss', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word_id: wordId })
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', checkLoginStatus);
+    </script>
+</head>
+<body>
+    <h1>Word Learning</h1>
+    <p id="user-welcome">Welcome, Guest!</p>
+    <div>
+        <label for="questionCount">Number of questions:</label>
+        <input type="number" id="questionCount" min="1" value="10">
+        <button onclick="startPractice()">Start Practice</button>
+    </div>
+
+    <p id="english">Loading...</p>
+    <input type="hidden" id="correctAnswer">
+    <input type="hidden" id="wordId">
+
+    <div id="choices"></div>
+
+    <div id="result-message" style="font-size: 1.2em; margin-top: 10px;"></div>
+
+    <div id="report" style="display:none;">
+        <h2>Practice Report</h2>
+        <p>Total Questions: <span id="totalQuestions"></span></p>
+        <p>Correct Answers: <span id="correctAnswers"></span></p>
+        <p>Accuracy: <span id="accuracy"></span>%</p>
+        <p>Time Taken: <span id="timeTaken"></span> seconds</p>
+    </div>
+</body>
+</html>
+

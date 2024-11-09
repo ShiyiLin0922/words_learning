@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Favorites</title>
+    <script>
+        // 检查登录状态
+        async function checkLoginStatus() {
+            const userWelcome = document.getElementById('user-welcome');
+
+            try {
+                const response = await fetch('/api/check_login', { method: 'GET' });
+                const result = await response.json();
+
+                if (result.logged_in) {
+                    userWelcome.textContent = `Welcome, ${result.username}!`;
+                } else {
+                    userWelcome.textContent = 'Welcome, Guest!';
+                    // Redirect to login page if not logged in
+                    window.location.href = "/login.html";
+                }
+            } catch (error) {
+                userWelcome.textContent = 'Error checking login status.';
+                console.error('Error:', error);
+            }
+        }
+
+        // 获取用户收藏的单词
+        async function loadFavorites() {
+            const response = await fetch("/api/get_favorites");
+            const data = await response.json();
+            const favoritesContainer = document.getElementById("favorites-list");
+
+            if (response.ok) {
+                favoritesContainer.innerHTML = "";
+                data.forEach(word => {
+                    favoritesContainer.innerHTML += `
+                        <li>
+                            ${word.word} - ${word.meaning}
+                            <button onclick="unfavorite(${word.id})">Unfavorite</button>
+                        </li>
+                    `;
+                });
+            } else {
+                favoritesContainer.innerHTML = `<p>Error: ${data.error}</p>`;
+            }
+        }
+
+        // 取消收藏
+        async function unfavorite(wordId) {
+            const response = await fetch("/api/unfavorite", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ word_id: wordId })
+            });
+            if (response.ok) {
+                loadFavorites();
+            } else {
+                alert("Failed to unfavorite word");
+            }
+        }
+
+        // 用户登出
+        async function logout() {
+            await fetch("/api/logout", { method: "POST" });
+            window.location.href = "/login.html";
+        }
+
+        // 页面加载时检查登录状态并加载收藏单词
+        window.onload = function() {
+            checkLoginStatus();
+            loadFavorites();
+        };
+    </script>
+</head>
+<body>
+    <h1 id="user-welcome">Welcome, Guest!</h1>
+    <button onclick="logout()">Logout</button>
+    <h2>Your Favorited Words:</h2>
+    <ul id="favorites-list">Loading...</ul>
+</body>
+</html>
+

@@ -1,0 +1,26 @@
+MySQL server is starting...
+ * Serving Flask app 'app'
+ * Debug mode: on
+2024-11-09 21:05:45,500 INFO: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8083
+2024-11-09 21:05:45,500 INFO: [33mPress CTRL+C to quit[0m
+2024-11-09 21:05:45,501 INFO:  * Restarting with stat
+2024-11-09 21:05:45,943 WARNING:  * Debugger is active!
+2024-11-09 21:05:45,943 INFO:  * Debugger PIN: 138-769-742
+2024-11-09 21:07:57,773 INFO: 127.0.0.1 - - [09/Nov/2024 21:07:57] "OPTIONS /api/login HTTP/1.1" 200 -
+2024-11-09 21:07:58,429 DEBUG: POST /api/login called
+2024-11-09 21:07:58,431 DEBUG: POST /api/login called
+2024-11-09 21:07:58,512 DEBUG: Database connection established.
+2024-11-09 21:07:58,513 DEBUG: Database connection established.
+2024-11-09 21:07:58,514 INFO: User User2 logged in successfully.
+2024-11-09 21:07:58,514 INFO: User User2 logged in successfully.
+2024-11-09 21:07:58,525 INFO: 127.0.0.1 - - [09/Nov/2024 21:07:58] "POST /api/login HTTP/1.1" 200 -
+2024-11-09 21:07:58,525 INFO: 127.0.0.1 - - [09/Nov/2024 21:07:58] "POST /api/login HTTP/1.1" 200 -
+2024-11-09 21:08:49,049 INFO: 127.0.0.1 - - [09/Nov/2024 21:08:49] "[31m[1mGET /api/login HTTP/1.1[0m" 405 -
+2024-11-09 21:08:49,725 INFO: 127.0.0.1 - - [09/Nov/2024 21:08:49] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2024-11-09 21:09:13,517 INFO:  * Detected change in '/data/home/fanglab/linshiyi/QSC/BigTask/word_learning/backend/config.py', reloading
+MySQL server is starting...
+MySQL server has been stopped.
+2024-11-09 21:09:13,565 INFO:  * Restarting with stat
+2024-11-09 21:09:14,027 WARNING:  * Debugger is active!
+2024-11-09 21:09:14,027 INFO:  * Debugger PIN: 138-769-742

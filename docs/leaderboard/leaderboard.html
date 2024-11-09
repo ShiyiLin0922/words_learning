@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { width: 80%; margin: auto; padding-top: 20px; }
+        .leaderboard { margin: 20px 0; padding: 10px; background-color: #f4f4f4; border-radius: 5px; }
+        .title { font-size: 1.5em; margin-bottom: 10px; }
+        .highlight { font-weight: bold; background-color: #d3ffd3; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #4CAF50; color: white; }
+    </style>
+    <script>
+        async function fetchLeaderboard(endpoint, tableId) {
+            try {
+                const response = await fetch(`/api/${endpoint}`);
+                const data = await response.json();
+                const table = document.getElementById(tableId);
+
+                data.forEach((entry, index) => {
+                    const row = table.insertRow();
+                    const rankCell = row.insertCell(0);
+                    const userCell = row.insertCell(1);
+                    const scoreCell = row.insertCell(2);
+
+                    rankCell.textContent = index + 1;
+                    userCell.textContent = entry[0];  // Display username
+                    scoreCell.textContent = entry[1];
+
+                    // Highlight the logged-in user’s row
+                    if (entry[0] === userUsername) {  // Compare usernames
+                        row.classList.add('highlight');
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching leaderboard:', error);
+            }
+        }
+
+        async function initializeLeaderboards() {
+            // Get user info (including username) from session
+            const sessionResponse = await fetch('/api/check_login');
+            const sessionData = await sessionResponse.json();
+            userUsername = sessionData.username || null;
+
+            // Fetch both leaderboards
+            fetchLeaderboard('login_days', 'loginDaysTable');
+            fetchLeaderboard('words_learned', 'wordsLearnedTable');
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeLeaderboards);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Leaderboard</h1>
+
+        <div class="leaderboard">
+            <div class="title">Top Users by Login Days</div>
+            <table id="loginDaysTable">
+                <tr>
+                    <th>Rank</th>
+                    <th>User</th>
+                    <th>Login Days</th>
+                </tr>
+            </table>
+        </div>
+
+        <div class="leaderboard">
+            <div class="title">Top Users by Words Learned</div>
+            <table id="wordsLearnedTable">
+                <tr>
+                    <th>Rank</th>
+                    <th>User</th>
+                    <th>Words Learned</th>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主页</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .module {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin: 10px;
+            padding: 20px;
+            width: 250px;
+            text-align: center;
+        }
+        .module h3 {
+            color: #4CAF50;
+        }
+        .module a {
+            display: block;
+            margin: 10px 0;
+            color: #4CAF50;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .module a:hover {
+            text-decoration: underline;
+        }
+        .status {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>欢迎来到单词学习平台</h1>
+</header>
+
+<div class="status" id="loginStatus">
+    <p>加载中...</p>
+</div>
+
+<div class="container">
+    <!-- 用户模块 -->
+    <div class="module">
+        <h3>用户模块</h3>
+        <a href="auth/login.html">登录</a>
+        <a href="auth/register.html">注册</a>
+    </div>
+
+    <!-- 学习模块 -->
+    <div class="module">
+        <h3>学习模块</h3>
+        <a href="learn/learn_all.html">学习默认词库</a>
+        <a href="learn/learn_favorite.html">学习收藏词库</a>
+        <a href="learn/learn_library.html">学习自定义词库</a>
+    </div>
+
+    <!-- 每日一练模块 -->
+    <div class="module">
+        <h3>每日一练模块</h3>
+        <a href="practice/practice_all.html">练习默认词库</a>
+        <a href="practice/practice_favorite.html">练习收藏词库</a>
+        <a href="practice/practice_library.html">练习自定义词库</a>
+    </div>
+
+    <!-- 查看词库模块 -->
+    <div class="module">
+        <h3>查看词库模块</h3>
+        <a href="words/favorite.html">查看收藏词库</a>
+        <a href="words/library.html">查看自定义词库</a>
+        <a href="words/miss.html">查看错题库</a>
+        <a href="words/delete.html">查看已删除词汇</a>
+    </div>
+
+    <!-- 上传词汇模块 -->
+    <div class="module">
+        <h3>上传词汇到自定义词库</h3>
+        <a href="words/upload.html">上传词汇</a>
+    </div>
+
+    <!-- 排行榜模块 -->
+    <div class="module">
+        <h3>排行榜模块</h3>
+        <a href="leaderboard/leaderboard.html">查看排行榜</a>
+    </div>
+</div>
+
+<script>
+    // 检查登录状态
+    function checkLoginStatus() {
+        fetch('/api/check_login')
+            .then(response => response.json())
+            .then(data => {
+                const loginStatusDiv = document.getElementById('loginStatus');
+                if (data.logged_in) {
+                    loginStatusDiv.innerHTML = `<p>欢迎，${data.username}！您已登录。</p>`;
+                } else {
+                    loginStatusDiv.innerHTML = `<p>您尚未登录，请先登录。</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('检查登录状态时发生错误:', error);
+            });
+    }
+
+    // 页面加载时检查登录状态
+    window.onload = checkLoginStatus;
+</script>
+
+</body>
+</html>
+

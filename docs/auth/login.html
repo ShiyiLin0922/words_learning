@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+<body>
+    <div id="login-container">
+        <h2>Login</h2>
+        <div id="status-message"></div>
+        <div id="error-message" style="color: red;"></div>
+        <div id="login-status"></div>
+        <div id="login-days" class="status-message"></div>
+        <form onsubmit="event.preventDefault(); login();">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+            <br><br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <br><br>
+            <button type="submit">Login</button>
+        </form>
+        <br>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        async function checkLoginStatus() {
+            const loginStatus = document.getElementById('login-status');
+            const loginDaysElement = document.getElementById('login-days');
+
+            try {
+                const response = await fetch('/api/check_login', { method: 'GET' });
+                const result = await response.json();
+
+                if (result.logged_in) {
+                    loginStatus.textContent = `Logged in as ${result.username}`;
+                    loginDaysElement.textContent = `You have logged in for ${result.login_days} day(s).`;
+                } else {
+                    loginStatus.textContent = 'Not logged in';
+                    loginDaysElement.textContent = '';
+                }
+            } catch (error) {
+                loginStatus.textContent = 'Failed to retrieve login status.';
+                console.error('Error:', error);
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const statusMessage = document.getElementById('status-message');
+            const errorMessage = document.getElementById('error-message');
+
+            // Clear previous messages
+            statusMessage.textContent = '';
+            errorMessage.textContent = '';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusMessage.textContent = result.message;
+                    errorMessage.textContent = '';
+                    checkLoginStatus(); // Update login status after successful login
+                } else {
+                    errorMessage.textContent = result.error;
+                }
+            } catch (error) {
+                errorMessage.textContent = 'An error occurred. Please try again later.';
+                console.error('Error:', error);
+            }
+        }
+
+        async function logout() {
+            const statusMessage = document.getElementById('status-message');
+            const errorMessage = document.getElementById('error-message');
+            statusMessage.textContent = '';
+            errorMessage.textContent = '';
+
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusMessage.textContent = result.message;
+                    checkLoginStatus(); // Refresh login status on logout
+                } else {
+                    errorMessage.textContent = result.error;
+                }
+            } catch (error) {
+                errorMessage.textContent = 'An error occurred while logging out. Please try again later.';
+                console.error('Error:', error);
+            }
+        }
+
+        // Check login status on page load
+        window.onload = checkLoginStatus;
+    </script>
+</body>
+</html>
+
